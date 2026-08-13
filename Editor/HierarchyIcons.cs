@@ -6,7 +6,6 @@ using UnityEngine.SceneManagement;
 
 using UnityEditor;
 using UnityEditor.SceneManagement;
-using UnityEditor.IMGUI.Controls;
 
 using OpenToolkit.HierarchyIcons.Settings;
 using OpenToolkit.HierarchyIcons.Utility;
@@ -15,9 +14,9 @@ namespace OpenToolkit.HierarchyIcons
 {
     public static class HierarchyIcons
     {
-        static Dictionary<int, IconData> s_iconCache = new Dictionary<int, IconData>();
+        static Dictionary<EntityId, IconData> s_iconCache = new Dictionary<EntityId, IconData>();
 
-        static int[] s_lastSelectionIDs = new int[0];
+        static EntityId[] s_lastSelectionIDs = new EntityId[0];
         static StageHandle s_lastStage;
 
 
@@ -58,14 +57,14 @@ namespace OpenToolkit.HierarchyIcons
 
         private static void DoSubscriptions()
         {
-            EditorApplication.hierarchyWindowItemOnGUI -= HierarchyWindowItemCallback;
+            EditorApplication.hierarchyWindowItemByEntityIdOnGUI -= HierarchyWindowItemCallback;
             EditorSceneManager.sceneOpened -= SceneOpened;
             Selection.selectionChanged -= OnSelectionChange;
             HierarchyIconsSettings.OnSettingsChange -= ClearIconCache;
 
             if (HierarchyIconsSettings.FeatureEnabled)
             {
-                EditorApplication.hierarchyWindowItemOnGUI += HierarchyWindowItemCallback;
+                EditorApplication.hierarchyWindowItemByEntityIdOnGUI += HierarchyWindowItemCallback;
                 EditorSceneManager.sceneOpened += SceneOpened;
                 Selection.selectionChanged += OnSelectionChange;
                 HierarchyIconsSettings.OnSettingsChange += ClearIconCache;
@@ -96,15 +95,15 @@ namespace OpenToolkit.HierarchyIcons
             else
             {
                 ClearFromIconCache(s_lastSelectionIDs);
-                ClearFromIconCache(Selection.instanceIDs);
+                ClearFromIconCache(Selection.entityIds);
             }
 
-            s_lastSelectionIDs = Selection.instanceIDs;
+            s_lastSelectionIDs = Selection.entityIds;
         }
 
-        public static void ClearFromIconCache(params int[] instances)
+        public static void ClearFromIconCache(params EntityId[] instances)
         {
-            foreach (int instanceId in instances)
+            foreach (EntityId instanceId in instances)
             {
                 s_iconCache.Remove(instanceId);
             }
@@ -125,7 +124,7 @@ namespace OpenToolkit.HierarchyIcons
             }
         }
 
-        static void HierarchyWindowItemCallback(int instanceID, Rect itemRect)
+        static void HierarchyWindowItemCallback(EntityId instanceID, Rect itemRect)
         {
             if (Event.current.type != EventType.Repaint)
             {
@@ -140,7 +139,7 @@ namespace OpenToolkit.HierarchyIcons
                 s_hierarchyWindows = ReflectionHelper.GetAllSceneHierarchyWindows();
             }
 
-            TreeViewUtil.GetItemFromWindows(instanceID, s_hierarchyWindows, out TreeViewItem treeItem, out s_treeController);
+            TreeViewUtil.GetItemFromWindows(instanceID, s_hierarchyWindows, out object treeItem, out s_treeController);
 
             if (treeItem == null)
             {
@@ -150,7 +149,7 @@ namespace OpenToolkit.HierarchyIcons
             DrawRow(instanceID, itemRect, treeItem);
         }
 
-        private static void DrawRow(int instanceID, Rect itemRect, TreeViewItem treeItem)
+        private static void DrawRow(EntityId instanceID, Rect itemRect, object treeItem)
         {
             IconData iconData;
 
@@ -160,7 +159,7 @@ namespace OpenToolkit.HierarchyIcons
             }
             else
             {
-                GameObject gameObject = EditorUtility.InstanceIDToObject(instanceID) as GameObject;
+                GameObject gameObject = EditorUtility.EntityIdToObject(instanceID) as GameObject;
                 if (gameObject == null)
                 {
                     return;
@@ -218,7 +217,7 @@ namespace OpenToolkit.HierarchyIcons
 
             GUI.Label(labelRect, labelString, style);
 
-            bool isExpanded = ReflectionHelper.IsExpanded(iconData.GameObject.GetInstanceID(), s_treeController);
+            bool isExpanded = ReflectionHelper.IsExpanded(iconData.GameObject.GetEntityId(), s_treeController);
 
             Rect iconRect = new Rect(itemRect);
             iconRect.width = 16;

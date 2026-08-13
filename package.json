@@ -1,9 +1,9 @@
 {
   "name": "com.opentoolkit.hierarchyicons",
   "displayName": "Hierarchy Icons",
-  "version": "0.9.3-beta",
+  "version": "0.9.4-beta",
   "description": "Replaces the standard cubes in the Scene Hierarchy with more informative icons.",
-  "unity": "2019.4",
+  "unity": "6000.5",
   "license": "MIT",
   "documentationUrl": "https://github.com/OpenUnityToolkit/HierarchyIcons",
   "keywords": [

@@ -58,7 +58,7 @@ namespace OpenToolkit.HierarchyIcons.Extensions
                 {
                     bones.Add(bone);
 
-                    HierarchyIcons.ClearFromIconCache(bone.gameObject.GetInstanceID());
+                    HierarchyIcons.ClearFromIconCache(bone.gameObject.GetEntityId());
                 }
             }
 

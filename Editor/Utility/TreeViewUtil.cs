@@ -1,10 +1,8 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Reflection;
+
+using UnityEngine;
 
 using UnityEditor;
-using UnityEditor.IMGUI.Controls;
 
 namespace OpenToolkit.HierarchyIcons.Utility
 {
@@ -36,7 +34,7 @@ namespace OpenToolkit.HierarchyIcons.Utility
             }
         }
 
-        public static void GetRowStatus(TreeViewItem treeItem, object treeController, out bool isSelected, out bool isHovering)
+        public static void GetRowStatus(object treeItem, object treeController, out bool isSelected, out bool isHovering)
         {
             isSelected = ReflectionHelper.IsItemDragSelectedOrSelected(treeItem, treeController);
             isHovering = ReflectionHelper.GetHoverItem(treeController) == treeItem;
@@ -52,7 +50,7 @@ namespace OpenToolkit.HierarchyIcons.Utility
             }
         }
 
-        public static void GetItemFromWindows(int instanceID, List<SearchableEditorWindow> hierarchyWindows, out TreeViewItem treeViewItem, out object treeController)
+        public static void GetItemFromWindows(EntityId instanceID, List<SearchableEditorWindow> hierarchyWindows, out object treeViewItem, out object treeController)
         {
             treeViewItem = null;
             treeController = null;
@@ -81,7 +79,7 @@ namespace OpenToolkit.HierarchyIcons.Utility
             }
         }
 
-        static TreeViewItem GetItem(int instanceID, out int row, object treeController)
+        static object GetItem(EntityId instanceID, out int row, object treeController)
         {
             row = ReflectionHelper.GetRow(instanceID, treeController);
 
@@ -94,14 +92,7 @@ namespace OpenToolkit.HierarchyIcons.Utility
                 return null;
             }
 
-            var item = ReflectionHelper.GetItem(row, treeController);
-
-            if (item != null)
-            {
-                return item;
-            }
-
-            return null;
+            return ReflectionHelper.GetItem(row, treeController);
         }
     }
 }

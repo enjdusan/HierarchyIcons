@@ -65,19 +65,6 @@ namespace OpenToolkit.HierarchyIcons.Utility
             }
         }
 
-        static Texture2D _prefabRootOverlay;
-        public static Texture2D PrefabRootOverlay
-        {
-            get
-            {
-                if (_prefabRootOverlay == null)
-                {
-                    _prefabRootOverlay = IconUtil.LoadAsset("prefab overlay");
-                }
-                return _prefabRootOverlay;
-            }
-        }
-
         public static Color GetBackgroundColour(bool isFocused, bool isOdd, bool isSelected, bool isHovering)
         {
             Color backgroundColor = isOdd ? BackingAlt : Backing;

@@ -64,7 +64,7 @@ namespace OpenToolkit.HierarchyIcons.Extensions
                 {
                     SetLight(iconData, "Lights/directional_light", "Lights/directional_fixture");
                 }
-                else if (light.type == LightType.Area)
+                else if (light.type == LightType.Rectangle)
                 {
                     SetLight(iconData, "Lights/area_light", "Lights/area_fixture");
                 }

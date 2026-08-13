@@ -3,43 +3,57 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 
+using UnityEngine;
+
 using UnityEditor;
-using UnityEditor.IMGUI.Controls;
 
 namespace OpenToolkit.HierarchyIcons
 {
+    // Tree view members are resolved from the runtime instance rather than from named types:
+    // Unity 6.5 made the whole tree view generic (TreeViewController<EntityId>) and left the
+    // old non-generic names behind as unrelated deprecated shims that no instance ever matches.
+    // Tree items are passed around as object for the same reason - they are only ever used as
+    // opaque handles for identity and for feeding back into the controller.
     public static class ReflectionHelper
     {
         static BindingFlags FLAGS = BindingFlags.NonPublic | BindingFlags.Public | BindingFlags.Instance;
 
         static Type SceneHierarchyWindowType = typeof(Editor).Assembly.GetType("UnityEditor.SceneHierarchyWindow");
-        static Type TreeViewControllerType = typeof(Editor).Assembly.GetType("UnityEditor.IMGUI.Controls.TreeViewController");
-        static Type ITreeViewDataSourceType = typeof(Editor).Assembly.GetType("UnityEditor.IMGUI.Controls.ITreeViewDataSource");
-        static Type TreeViewStateType = typeof(Editor).Assembly.GetType("UnityEditor.IMGUI.Controls.TreeViewState");
-        static Type RenameOverlayType = typeof(Editor).Assembly.GetType("UnityEditor.RenameOverlay");
 
         static MethodInfo s_isRenamingMethod;
         static PropertyInfo s_stateRenameOverlayProperty;
         static PropertyInfo s_stateProperty;
         public static bool IsTreeRenaming(object treeController)
         {
-            if (s_isRenamingMethod == null)
+            if (s_stateProperty == null)
             {
-                s_isRenamingMethod = RenameOverlayType.GetMethod("IsRenaming");
+                s_stateProperty = treeController.GetType().GetProperty("state", FLAGS);
+            }
+
+            var state = s_stateProperty.GetValue(treeController);
+
+            if (state == null)
+            {
+                return false;
             }
 
             if (s_stateRenameOverlayProperty == null)
             {
-                s_stateRenameOverlayProperty = TreeViewStateType.GetProperty("renameOverlay", FLAGS);
+                s_stateRenameOverlayProperty = state.GetType().GetProperty("renameOverlay", FLAGS);
             }
 
-            if (s_stateProperty == null)
-            {
-                s_stateProperty = TreeViewControllerType.GetProperty("state", FLAGS);
-            }
-
-            var state = s_stateProperty.GetValue(treeController);
             var renameOverlay = s_stateRenameOverlayProperty.GetValue(state);
+
+            if (renameOverlay == null)
+            {
+                return false;
+            }
+
+            if (s_isRenamingMethod == null)
+            {
+                s_isRenamingMethod = renameOverlay.GetType().GetMethod("IsRenaming");
+            }
+
             bool? isRenaming = s_isRenamingMethod.Invoke(renameOverlay, null) as bool?;
 
             return isRenaming == true;
@@ -57,134 +71,124 @@ namespace OpenToolkit.HierarchyIcons
                 return null;
             }
 
-            var prop = hierarchyWindow.GetType().GetProperty("sceneHierarchy");
-            var sceneHierarchy = prop.GetValue(hierarchyWindow);
+            var prop = hierarchyWindow.GetType().GetProperty("sceneHierarchy", FLAGS);
+            var sceneHierarchy = prop?.GetValue(hierarchyWindow);
 
-            var treeViewMethod = sceneHierarchy.GetType().GetProperty("treeView", FLAGS);
-            var controller = treeViewMethod.GetValue(sceneHierarchy);
+            if (sceneHierarchy == null)
+            {
+                return null;
+            }
 
-            return controller;
+            var treeViewProperty = sceneHierarchy.GetType().GetProperty("treeView", FLAGS);
+
+            return treeViewProperty?.GetValue(sceneHierarchy);
         }
 
         static PropertyInfo s_dataProperty;
-        static MethodInfo s_getItemMethod;
-
-        public static TreeViewItem GetItem(int row, object treeController)
+        static object GetData(object treeController)
         {
             if (s_dataProperty == null)
             {
-                s_dataProperty = TreeViewControllerType.GetProperty("data", FLAGS);
+                s_dataProperty = treeController.GetType().GetProperty("data", FLAGS);
             }
 
-            if (s_getItemMethod == null)
-            {
-                s_getItemMethod = ITreeViewDataSourceType.GetMethod("GetItem", FLAGS);
-            }
+            return s_dataProperty.GetValue(treeController);
+        }
 
-            var data = s_dataProperty.GetValue(treeController);
+        static MethodInfo s_getItemMethod;
+        public static object GetItem(int row, object treeController)
+        {
+            var data = GetData(treeController);
+
             if (GetRowCount(treeController) <= row)
             {
                 return null;
             }
 
-            var item = s_getItemMethod.Invoke(data, new object[] { row }) as TreeViewItem;
-            return item;
+            if (s_getItemMethod == null)
+            {
+                s_getItemMethod = data.GetType().GetMethod("GetItem", FLAGS);
+            }
+
+            return s_getItemMethod.Invoke(data, new object[] { row });
         }
 
         static MethodInfo s_getRowMethod;
-        public static int GetRow(int id, object treeController)
+        public static int GetRow(EntityId id, object treeController)
         {
-            if (s_dataProperty == null)
-            {
-                s_dataProperty = TreeViewControllerType.GetProperty("data", FLAGS);
-            }
+            var data = GetData(treeController);
 
             if (s_getRowMethod == null)
             {
-                s_getRowMethod = ITreeViewDataSourceType.GetMethod("GetRow", FLAGS);
+                s_getRowMethod = data.GetType().GetMethod("GetRow", FLAGS);
             }
 
-            var data = s_dataProperty.GetValue(treeController);
             return (int)s_getRowMethod.Invoke(data, new object[] { id });
         }
 
         static PropertyInfo s_getRowCountProperty;
         public static int GetRowCount(object treeController)
         {
-            if (s_dataProperty == null)
-            {
-                s_dataProperty = TreeViewControllerType.GetProperty("data", FLAGS);
-            }
+            var data = GetData(treeController);
 
             if (s_getRowCountProperty == null)
             {
-                s_getRowCountProperty = ITreeViewDataSourceType.GetProperty("rowCount", FLAGS);
+                s_getRowCountProperty = data.GetType().GetProperty("rowCount", FLAGS);
             }
 
-            var data = s_dataProperty.GetValue(treeController);
-            return (int)s_getRowCountProperty.GetValue(data, new object[] { });
+            return (int)s_getRowCountProperty.GetValue(data);
         }
 
         static MethodInfo s_isExpandedMethod;
-        public static bool IsExpanded(int id, object treeController)
+        public static bool IsExpanded(EntityId id, object treeController)
         {
-            if (s_dataProperty == null)
-            {
-                s_dataProperty = TreeViewControllerType.GetProperty("data", FLAGS);
-            }
+            var data = GetData(treeController);
 
             if (s_isExpandedMethod == null)
             {
-                s_isExpandedMethod = ITreeViewDataSourceType.GetMethod("IsExpanded", new Type[] { typeof(int) });
+                s_isExpandedMethod = data.GetType().GetMethod("IsExpanded", new Type[] { typeof(EntityId) });
             }
 
-            var data = s_dataProperty.GetValue(treeController);
             return (bool)s_isExpandedMethod.Invoke(data, new object[] { id });
         }
 
         static MethodInfo s_isItemDragSelectedOrSelectedMethod;
-        public static bool IsItemDragSelectedOrSelected(TreeViewItem item, object treeController)
+        public static bool IsItemDragSelectedOrSelected(object item, object treeController)
         {
             if (s_isItemDragSelectedOrSelectedMethod == null)
             {
-                s_isItemDragSelectedOrSelectedMethod = TreeViewControllerType.GetMethod("IsItemDragSelectedOrSelected", FLAGS);
+                s_isItemDragSelectedOrSelectedMethod = treeController.GetType().GetMethod("IsItemDragSelectedOrSelected", FLAGS);
             }
+
             return (bool)s_isItemDragSelectedOrSelectedMethod.Invoke(treeController, new object[] { item });
         }
 
         static PropertyInfo s_hoverItemProperty;
-        public static TreeViewItem GetHoverItem(object treeController)
+        public static object GetHoverItem(object treeController)
         {
             if (s_hoverItemProperty == null)
             {
-                s_hoverItemProperty = TreeViewControllerType.GetProperty("hoveredItem", FLAGS);
+                s_hoverItemProperty = treeController.GetType().GetProperty("hoveredItem", FLAGS);
             }
-            return s_hoverItemProperty.GetValue(treeController, new object[] { }) as TreeViewItem;
+
+            return s_hoverItemProperty.GetValue(treeController);
         }
 
         static PropertyInfo s_isDraggingProperty;
-        static MethodInfo s_getDropTargetControlIDMethod;
         static PropertyInfo s_draggingProperty;
+        static MethodInfo s_getDropTargetControlIDMethod;
         public static bool IsDragging(object treeController)
         {
             if (s_isDraggingProperty == null)
             {
-                s_isDraggingProperty = TreeViewControllerType.GetProperty("isDragging", FLAGS);
-            }
-            if (s_draggingProperty == null)
-            {
-                s_draggingProperty = TreeViewControllerType.GetProperty("dragging", FLAGS);
-            }
-            if (s_getDropTargetControlIDMethod == null)
-            {
-                var tempDragging = s_draggingProperty.GetValue(treeController);
-                if (tempDragging != null)
-                {
-                    s_getDropTargetControlIDMethod = tempDragging.GetType().GetMethod("GetDropTargetControlID", FLAGS);
-                }
+                s_isDraggingProperty = treeController.GetType().GetProperty("isDragging", FLAGS);
             }
 
-            bool isDragging = (bool)s_isDraggingProperty.GetValue(treeController);
+            if (s_draggingProperty == null)
+            {
+                s_draggingProperty = treeController.GetType().GetProperty("dragging", FLAGS);
+            }
+
             var dragging = s_draggingProperty.GetValue(treeController);
 
             if (dragging == null)
@@ -192,9 +196,15 @@ namespace OpenToolkit.HierarchyIcons
                 return false;
             }
 
+            if (s_getDropTargetControlIDMethod == null)
+            {
+                s_getDropTargetControlIDMethod = dragging.GetType().GetMethod("GetDropTargetControlID", FLAGS);
+            }
+
+            bool isDragging = (bool)s_isDraggingProperty.GetValue(treeController);
             int dropTargetId = (int)s_getDropTargetControlIDMethod.Invoke(dragging, new object[] { });
 
-            return isDragging && dragging != null && dropTargetId == 0;
+            return isDragging && dropTargetId == 0;
         }
 
         static MethodInfo s_getSceneHierarchiesMethod;

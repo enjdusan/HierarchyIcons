@@ -78,7 +78,7 @@ namespace OpenToolkit.HierarchyIcons.Settings
 
         static int SettingSort(Setting a, Setting b)
         {
-            string stA = a.Category + b.Label;
+            string stA = a.Category + a.Label;
             string stB = b.Category + b.Label;
             return stA.CompareTo(stB);
         }

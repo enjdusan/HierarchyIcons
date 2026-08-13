@@ -35,8 +35,8 @@ You can use any texture in your project as an icon, but it should be square, 32x
 ![Image](Documentation~/hierarchy-iconconfig.png)
 
 ## Compatibility
-Minimum version Unity 2019.4
-Tested with Unity 2019.4, 2020.3, 2021.1, and Unity 6
+Minimum version Unity 6000.5
+Tested with Unity 6000.5
 
 Currently compatible with dark mode
 
