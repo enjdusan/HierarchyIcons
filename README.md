@@ -1,6 +1,8 @@
 # Hierarchy Icons
 Replaces the standard cubes in the Scene Hierarchy with more informative icons.
 
+Fork of [OpenUnityToolkit/HierarchyIcons](https://github.com/OpenUnityToolkit/HierarchyIcons), updated for Unity 6.5.
+
 ![Image](Documentation~/hierarchy-beforeafter.png)
 
 ## Features
